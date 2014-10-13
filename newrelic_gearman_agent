@@ -1,0 +1,62 @@
+#! /usr/bin/env ruby
+
+require "rubygems"
+require "bundler/setup"
+
+require "newrelic_plugin"
+require "gearman/server"
+
+module GearmanPlugin
+
+  class Agent < NewRelic::Plugin::Agent::Base
+
+    agent_guid "com.channelgrabber.newrelic.plugin.gearman"
+    agent_version "0.1.0"
+    agent_config_options :name, :host, :port
+    
+    def initialize(*args)
+      super
+      @name ||= "Gearman"
+      @port ||= 4730
+    end
+    
+    agent_human_labels("Gearman Plugin") do
+      "#{@name} (#{@host}:#{@port})"
+    end
+
+    def poll_cycle
+      gearman = Gearman::Server.new("#{@host}:#{@port}")
+      queues = gearman.status
+      queues.each do |queueName, queue|
+        report_queue queueName, queue
+      end
+      report_queue_summary(queues)
+    end
+    
+    def report_queue(queueName, queue)
+      metric_name = "Gearman/Queues/#{queueName}"
+      report_metric "#{metric_name}", "WaitingJobs", queue[:queue].to_i
+      report_metric "#{metric_name}", "RunningJobs", queue[:active].to_i
+      report_metric "#{metric_name}", "Workers", queue[:workers].to_i
+    end
+    
+    def report_queue_summary(queues)
+      metric_name = "Gearman/Summary"
+      report_metric metric_name, "WaitingJobs", queues.inject(0) {|m,e| m += e[1][:queue].to_i }
+      report_metric metric_name, "RunningJobs", queues.inject(0) {|m,e| m += e[1][:active].to_i }
+      report_metric metric_name, "Workers", queues.inject(0) {|m,e| m += e[1][:workers].to_i }
+    end
+
+  end
+
+  #
+  # Register this agent with the component.
+  #
+  NewRelic::Plugin::Setup.install_agent :gearman_agent, self
+
+  #
+  # Launch the agent; this never returns.
+  #
+  NewRelic::Plugin::Run.setup_and_run
+
+end

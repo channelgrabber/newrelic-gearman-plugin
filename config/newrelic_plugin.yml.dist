@@ -1,0 +1,30 @@
+newrelic:
+  #
+  # Update with your New Relic account license key:
+  #
+  license_key: 'YOUR_LICENSE_KEY_HERE'
+  #
+  # Set to '1' for verbose output, remove for normal output.
+  # All output goes to stdout/stderr.
+  #
+  # verbose: 1
+#
+# Agent Configuration:
+#
+agents:
+  gearman_agent:
+    -
+      # Optional server name, defaults to "Gearman"
+      #name: 
+      # Server host and port
+      host: localhost
+      # Port is optional and defaults to 4730
+      #port: 4730
+# Second server to monitor      
+#    -
+#      # Optional server name, defaults to "Gearman"
+#      #name: 
+#      # Server host and port
+#      host: localhost
+#      # Port is optional and defaults to 4730
+#      #port: 4730
