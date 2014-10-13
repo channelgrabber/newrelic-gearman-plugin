@@ -9,15 +9,14 @@ require "gearman/server"
 module GearmanPlugin
 
   class Agent < NewRelic::Plugin::Agent::Base
-
     agent_guid "com.channelgrabber.newrelic.plugin.gearman"
     agent_version "0.1.0"
     agent_config_options :name, :host, :port
     
-    def initialize(*args)
+    def initialize context, options = {}
+      options[:name] ||= "Gearman"
+      options[:port] ||= 4730
       super
-      @name ||= "Gearman"
-      @port ||= 4730
     end
     
     agent_human_labels("Gearman Plugin") do
