@@ -10,7 +10,7 @@ This plugin will provide metrics from one or more [Gearman](http://gearman.org/)
 - Bundler
 - A NewRelic account
 
-## Gearman Agent Installation
+## Installation
 
 1. Download to the location you want to run the Gearman agent from
 2. Run `bundle install` in the folder you downloaded the agent to
