@@ -10,7 +10,7 @@ module GearmanPlugin
 
   class Agent < NewRelic::Plugin::Agent::Base
     agent_guid "com.channelgrabber.newrelic.plugin.gearman"
-    agent_version "0.1.1"
+    agent_version "0.2.0"
     agent_config_options :name, :host, :port
     
     def initialize context, options = {}
@@ -29,21 +29,36 @@ module GearmanPlugin
       queues.each do |queueName, queue|
         report_queue queueName, queue
       end
-      report_queue_summary(queues)
+      report_queue_summary queues
     end
     
     def report_queue(queueName, queue)
-      metric_name = "Gearman/Queues/#{queueName}"
-      report_metric "#{metric_name}", "WaitingJobs", queue[:queue].to_i
-      report_metric "#{metric_name}", "RunningJobs", queue[:active].to_i
-      report_metric "#{metric_name}", "Workers", queue[:workers].to_i
+      queue_stats = queue.inject({}) do |queue_stats, (stat_name, value)| 
+        queue_stats[stat_name] = value.to_f
+        queue_stats
+      end
+      report_queue_metrics "Queues/#{queueName}", queue_stats
     end
     
     def report_queue_summary(queues)
-      metric_name = "Gearman/Summary"
-      report_metric metric_name, "WaitingJobs", queues.inject(0) {|m,e| m += e[1][:queue].to_i }
-      report_metric metric_name, "RunningJobs", queues.inject(0) {|m,e| m += e[1][:active].to_i }
-      report_metric metric_name, "Workers", queues.inject(0) {|m,e| m += e[1][:workers].to_i }
+      queue_summary = {}
+      queues.each do |queueName, queue|
+          queue.each do |stat_name, value|
+              queue_summary[stat_name] ||= 0
+              queue_summary[stat_name] += value.to_f
+          end
+      end
+      report_queue_metrics "Summary", queue_summary
+    end
+
+    def report_queue_metrics(metric_suffix, queue_stats)
+      metric_name = "Gearman/#{metric_suffix}"
+      report_metric metric_name, "WaitingJobs", queue_stats[:queue]
+      report_metric metric_name, "RunningJobs", queue_stats[:active]
+      report_metric metric_name, "TotalWorkers", queue_stats[:workers]
+      report_metric metric_name, "AvailableWorkers", queue_stats[:workers] - queue_stats[:active]
+      report_metric metric_name, "%BusyWorkers", queue_stats[:workers] > 0 ? (queue_stats[:active] / queue_stats[:workers]) * 100 : 0
+      report_metric metric_name, "WaitingJobsPerWorker", (queue_stats[:queue] / queue_stats[:workers]) if queue_stats[:workers] > 0
     end
 
   end
